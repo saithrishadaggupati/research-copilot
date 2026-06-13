@@ -43,7 +43,7 @@ def research(request: ResearchRequest):
             answer=answer,
             confidence_score=confidence_score,
             sources=sources,
-            model_used=settings.openai_model
+            model_used=settings.groq_model
         )
 
     except Exception as e:

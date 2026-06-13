@@ -1,6 +1,8 @@
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 from pydantic import ConfigDict
-from functools import lru_cache
+
+load_dotenv(override=True)
 
 
 class Settings(BaseSettings):
@@ -11,10 +13,6 @@ class Settings(BaseSettings):
     app_version: str = "1.0.0"
     debug: bool = True
 
-    # OpenAI (kept for future use)
-    openai_api_key: str = "placeholder"
-    openai_model: str = "gpt-4o-mini"
-
     # Groq
     groq_api_key: str
     groq_model: str = "llama-3.3-70b-versatile"
@@ -23,6 +21,5 @@ class Settings(BaseSettings):
     tavily_api_key: str
 
 
-@lru_cache()
 def get_settings() -> Settings:
     return Settings()
