@@ -1,3 +1,4 @@
+from langsmith import traceable
 from groq import Groq
 from app.models.schemas import SearchResult
 from app.core.config import get_settings
@@ -19,6 +20,7 @@ class RAGService:
             )
         return "\n---\n".join(context_parts)
 
+    @traceable(name="generate_answer")
     def generate_answer(self, query: str, sources: list[SearchResult]) -> str:
         context = self._build_context(sources)
 
