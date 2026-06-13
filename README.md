@@ -6,6 +6,18 @@ Instead of relying solely on a language model, this project first searches the w
 
 The goal isn't to eliminate mistakes completely—it's to make the system more transparent about what it knows and how well the available sources support the answer.
 
+## Screenshots
+
+
+
+![Home](images/research-copilot-home.png)
+
+
+
+
+
+![Result](images/research-copilot-result.png)
+
 ## How it works
 
 1. A user submits a question through the Streamlit interface.
