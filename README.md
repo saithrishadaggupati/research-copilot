@@ -1,4 +1,3 @@
-@'
 # Research Copilot
 
 I built Research Copilot because I was frustrated with how often AI tools give confident answers without showing where the information comes from.
