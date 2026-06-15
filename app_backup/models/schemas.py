@@ -21,18 +21,8 @@ class ResearchResponse(BaseModel):
     confidence_score: float
     sources: List[SearchResult]
     model_used: str
-    query_variants: List[str] = []
-    cost_usd: float = 0.0
-    tokens_used: int = 0
 
 
 class ErrorResponse(BaseModel):
     error: str
     detail: Optional[str] = None
-
-
-class CostRecord(BaseModel):
-    timestamp: str
-    query: str
-    tokens_used: int
-    cost_usd: float

@@ -1,0 +1,49 @@
+from langsmith import traceable
+from groq import Groq
+from app.models.schemas import SearchResult
+from app.core.config import get_settings
+from app.core.prompts import RESEARCH_SYSTEM_PROMPT, RESEARCH_USER_PROMPT
+
+
+class RAGService:
+    def __init__(self):
+        self.settings = get_settings()
+        self.client = Groq(api_key=self.settings.groq_api_key)
+
+    def _build_context(self, sources: list[SearchResult]) -> str:
+        context_parts = []
+        for i, source in enumerate(sources, 1):
+            context_parts.append(
+                f"Source {i}: {source.title}\n"
+                f"URL: {source.url}\n"
+                f"Content: {source.content}\n"
+            )
+        return "\n---\n".join(context_parts)
+
+    @traceable(name="generate_answer")
+    def generate_answer(self, query: str, sources: list[SearchResult]) -> str:
+        context = self._build_context(sources)
+
+        response = self.client.chat.completions.create(
+            model=self.settings.groq_model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": RESEARCH_SYSTEM_PROMPT
+                },
+                {
+                    "role": "user",
+                    "content": RESEARCH_USER_PROMPT.format(
+                        query=query,
+                        context=context
+                    )
+                }
+            ],
+            temperature=0.3
+        )
+
+        return response.choices[0].message.content
+
+
+def get_rag_service() -> RAGService:
+    return RAGService()

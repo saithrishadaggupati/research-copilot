@@ -22,10 +22,18 @@ class ConfidenceService:
         response = self.client.chat.completions.create(
             model=self.settings.groq_model,
             messages=[
-                {"role": "system", "content": CONFIDENCE_SYSTEM_PROMPT},
-                {"role": "user", "content": CONFIDENCE_USER_PROMPT.format(
-                    query=query, answer=answer, context=context
-                )}
+                {
+                    "role": "system",
+                    "content": CONFIDENCE_SYSTEM_PROMPT
+                },
+                {
+                    "role": "user",
+                    "content": CONFIDENCE_USER_PROMPT.format(
+                        query=query,
+                        answer=answer,
+                        context=context
+                    )
+                }
             ],
             temperature=0.1
         )
