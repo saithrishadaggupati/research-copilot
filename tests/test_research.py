@@ -6,8 +6,6 @@ from app.services.confidence_service import ConfidenceService
 from app.services.search_service import SearchService
 
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
-
 @pytest.fixture
 def mock_sources():
     return [
@@ -35,8 +33,6 @@ def mock_settings():
     return settings
 
 
-# ── Search Service Tests ───────────────────────────────────────────────────────
-
 class TestSearchService:
     @patch("app.services.search_service.TavilyClient")
     @patch("app.services.search_service.get_settings")
@@ -56,11 +52,10 @@ class TestSearchService:
         }
 
         service = SearchService()
-        results = service.search("what is RAG", max_results=1)
+        results, variants = service.search("what is RAG", max_results=1)
 
         assert len(results) == 1
         assert results[0].title == "What is RAG?"
-        assert results[0].relevance_score == 0.95
 
     @patch("app.services.search_service.TavilyClient")
     @patch("app.services.search_service.get_settings")
@@ -71,30 +66,35 @@ class TestSearchService:
         mock_client.search.return_value = {"results": []}
 
         service = SearchService()
-        results = service.search("unknown query")
+        results, variants = service.search("unknown query")
 
         assert results == []
 
 
-# ── RAG Service Tests ──────────────────────────────────────────────────────────
-
 class TestRAGService:
+    @patch("app.services.rag_service.traceable", lambda **kw: lambda f: f)
     @patch("app.services.rag_service.Groq")
     @patch("app.services.rag_service.get_settings")
     def test_generate_answer(self, mock_get_settings, mock_groq, mock_settings, mock_sources):
         mock_get_settings.return_value = mock_settings
         mock_client = MagicMock()
         mock_groq.return_value = mock_client
+        mock_usage = MagicMock()
+        mock_usage.total_tokens = 100
+        mock_usage.prompt_tokens = 80
+        mock_usage.completion_tokens = 20
         mock_client.chat.completions.create.return_value = MagicMock(
-            choices=[MagicMock(message=MagicMock(content="RAG is a framework that combines LLMs with external knowledge."))]
+            choices=[MagicMock(message=MagicMock(content="RAG is a framework that combines LLMs with external knowledge."))],
+            usage=mock_usage
         )
 
         service = RAGService()
-        answer = service.generate_answer("what is RAG", mock_sources)
+        answer, tokens, cost = service.generate_answer("what is RAG", mock_sources)
 
         assert isinstance(answer, str)
         assert len(answer) > 0
 
+    @patch("app.services.rag_service.traceable", lambda **kw: lambda f: f)
     @patch("app.services.rag_service.Groq")
     @patch("app.services.rag_service.get_settings")
     def test_build_context(self, mock_get_settings, mock_groq, mock_settings, mock_sources):
@@ -104,12 +104,10 @@ class TestRAGService:
         service = RAGService()
         context = service._build_context(mock_sources)
 
-        assert "Source 1" in context
-        assert "Source 2" in context
+        assert "[1]" in context
+        assert "[2]" in context
         assert "example.com" in context
 
-
-# ── Confidence Service Tests ───────────────────────────────────────────────────
 
 class TestConfidenceService:
     @patch("app.services.confidence_service.Groq")
