@@ -7,6 +7,12 @@ class ResearchRequest(BaseModel):
     max_results: int = 5
     use_web_search: bool = True
 
+class ResearchRequest(BaseModel):
+    query: str
+    max_results: int = 5
+    use_web_search: bool = True
+    use_documents: bool = False
+
 
 class SearchResult(BaseModel):
     title: str
@@ -25,6 +31,19 @@ class ResearchResponse(BaseModel):
     cost_usd: float = 0.0
     tokens_used: int = 0
 
+class DocumentInfo(BaseModel):
+    doc_id: str
+    filename: str
+
+
+class DocumentUploadResponse(BaseModel):
+    doc_id: str
+    filename: str
+    chunks: int
+
+
+class DocumentListResponse(BaseModel):
+    documents: List[DocumentInfo]
 
 class ErrorResponse(BaseModel):
     error: str

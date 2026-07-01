@@ -8,6 +8,7 @@ from app.services.search_service import get_search_service
 from app.services.rag_service import get_rag_service, COST_PER_INPUT_TOKEN, COST_PER_OUTPUT_TOKEN
 from app.services.confidence_service import get_confidence_service
 from app.services.cost_tracker import get_cost_tracker
+from app.services.document_service import get_document_service
 from app.core.config import get_settings
 
 router = APIRouter()
@@ -23,11 +24,21 @@ limiter = Limiter(key_func=get_remote_address)
 @limiter.limit("10/minute")
 def research(request: Request, body: ResearchRequest):
     try:
-        search_service = get_search_service()
-        sources, query_variants = search_service.search(
-            query=body.query,
-            max_results=body.max_results
-        )
+        sources, query_variants = [], []
+        if body.use_web_search:
+            search_service = get_search_service()
+            sources, query_variants = search_service.search(
+                query=body.query,
+                max_results=body.max_results
+            )
+
+        if body.use_documents:
+            document_service = get_document_service()
+            doc_sources = document_service.search(body.query, top_k=body.max_results)
+            sources = doc_sources + sources
+
+        if not sources:
+            raise HTTPException(status_code=400, detail="No sources enabled or found. Enable use_web_search or use_documents.")
 
         rag_service = get_rag_service()
         answer, tokens_used, cost_usd = rag_service.generate_answer(
@@ -60,6 +71,8 @@ def research(request: Request, body: ResearchRequest):
             tokens_used=tokens_used
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -76,11 +89,18 @@ async def research_stream(request: Request, body: ResearchRequest):
     """
     async def event_generator():
         try:
-            search_service = get_search_service()
-            sources, query_variants = search_service.search(
-                query=body.query,
-                max_results=body.max_results
-            )
+            sources, query_variants = [], []
+            if body.use_web_search:
+                search_service = get_search_service()
+                sources, query_variants = search_service.search(
+                    query=body.query,
+                    max_results=body.max_results
+                )
+
+            if body.use_documents:
+                document_service = get_document_service()
+                doc_sources = document_service.search(body.query, top_k=body.max_results)
+                sources = doc_sources + sources
 
             sources_payload = json.dumps({
                 "type": "sources",

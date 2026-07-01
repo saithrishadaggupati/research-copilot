@@ -10,5 +10,11 @@
     "query": "\"What is RAG in AI?\"",
     "tokens_used": 2757,
     "cost_usd": 0.001676
+  },
+  {
+    "timestamp": "2026-07-01T08:37:29.630885",
+    "query": "what projects are listed in the document",
+    "tokens_used": 2719,
+    "cost_usd": 0.001617
   }
 ]

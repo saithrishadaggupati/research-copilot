@@ -15,6 +15,7 @@ Every design decision came from a real problem. Single-query search misses too m
 
 
 
+
 ![Result](images/research-copilot-result.png)
 
 
@@ -34,6 +35,16 @@ Every design decision came from a real problem. Single-query search misses too m
 
 I separated query expansion, retrieval, generation, and evaluation into distinct steps because each is a different problem. Combining them into a single prompt made all four worse.
 
+## Document search
+
+Web search alone doesn't help if the answer lives in a PDF on your desktop. I added a second retrieval path for that: upload a file, it gets chunked and embedded into a persistent vector index, and queries can pull from it instead of or alongside the web.
+
+The two retrieval paths are deliberately separate systems, not one merged pipeline. Web search uses ephemeral, per-query BM25 + ChromaDB reranking — it exists for the length of one request and disappears. Document search uses LlamaIndex's `VectorStoreIndex` backed by a persistent ChromaDB collection on disk, so uploaded files stay searchable across restarts. Trying to force both through the same reranking logic would have meant either re-embedding documents on every query (slow) or caching web results permanently (stale). Keeping them as two toggles (`use_web_search`, `use_documents`) that can run independently or together was simpler and more honest about what each one actually does.
+
+- Upload PDFs, `.txt`, or `.md` files via `/api/v1/documents/upload`
+- Files are split into ~512-token chunks with `SentenceSplitter` and embedded with `BAAI/bge-small-en-v1.5`
+- `/api/v1/research` and `/api/v1/research/stream` accept `use_documents: true` to pull from uploaded files, `use_web_search: true` for live web results, or both — results merge into one source list before generation
+
 ## Tech Stack
 
 - FastAPI + Uvicorn - backend API
@@ -43,7 +54,8 @@ I separated query expansion, retrieval, generation, and evaluation into distinct
 - Tavily - real-time web search
 - Reciprocal Rank Fusion - multi-query result merging
 - BM25 (rank-bm25) - keyword re-ranking
-- ChromaDB - vector similarity re-ranking
+- ChromaDB - vector similarity re-ranking + persistent document storage
+- LlamaIndex - document chunking, embedding, and retrieval
 - Cohere - neural re-ranker (optional)
 - LangSmith - request tracing and observability
 - Pydantic v2 - data validation
@@ -61,11 +73,13 @@ app/
     schemas.py             # request and response shapes
   routers/
     research.py            # /research and /research/stream endpoints
+    documents.py            # document upload/list/delete endpoints
   services/
     search_service.py      # query expansion + RRF + BM25 + ChromaDB + Cohere
     rag_service.py         # streaming answer generation
     confidence_service.py  # confidence scoring
     cost_tracker.py        # per-query token and cost logging
+    document_service.py    # LlamaIndex ingestion + persistent vector search
 frontend/
   streamlit_app.py         # streaming UI with cost dashboard
 evals/
@@ -93,6 +107,9 @@ docker-compose up --build
 - POST /api/v1/research - standard JSON response
 - POST /api/v1/research/stream - SSE streaming response
 - GET /api/v1/costs - cost dashboard data
+- POST /api/v1/documents/upload - upload a PDF/txt/md file for indexing
+- GET /api/v1/documents - list indexed documents
+- DELETE /api/v1/documents/{doc_id} - remove a document from the index
 
 ## Evaluations
 
